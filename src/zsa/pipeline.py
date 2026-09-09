@@ -1,4 +1,7 @@
-"""End to end zero shot annotation: image in, labelled masks out."""
+"""End to end zero shot annotation: image in, labelled masks out.
+
+SAM2 proposes class agnostic masks; CLIP assigns the zero shot semantic label.
+"""
 
 from __future__ import annotations
 
@@ -24,7 +27,7 @@ class Annotation:
     """One labelled region."""
 
     label: str
-    confidence: float
+    score: float
     bbox: tuple[int, int, int, int]
     area: int
     mask: np.ndarray
@@ -33,7 +36,7 @@ class Annotation:
         x, y, w, h = self.bbox
         return {
             "label": self.label,
-            "confidence": round(self.confidence, 4),
+            "score": round(self.score, 4),
             "bbox": {"x": x, "y": y, "w": w, "h": h},
             "area": self.area,
         }
@@ -81,7 +84,7 @@ class ZeroShotAnnotator:
         SAM2 happily returns a whole tractor and its front wheel as separate
         proposals. Without this you annotate the same pixels twice.
         """
-        ordered = sorted(annotations, key=lambda a: a.confidence, reverse=True)
+        ordered = sorted(annotations, key=lambda a: a.score, reverse=True)
         kept: list[Annotation] = []
         for cand in ordered:
             if all(_iou(cand.mask, k.mask) < self.cfg.nms_iou for k in kept):
@@ -103,12 +106,12 @@ class ZeroShotAnnotator:
 
         annotations: list[Annotation] = []
         for prop, (label, conf) in zip(proposals, scored):
-            if conf < self.cfg.min_confidence:
+            if conf < self.cfg.min_score:
                 label = UNLABELLED
             annotations.append(
                 Annotation(
                     label=label,
-                    confidence=conf,
+                    score=conf,
                     bbox=prop.bbox,
                     area=prop.area,
                     mask=prop.mask,

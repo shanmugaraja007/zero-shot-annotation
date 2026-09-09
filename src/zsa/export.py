@@ -59,7 +59,7 @@ def to_coco(records, categories: list[str], out_path: str | Path) -> Path:
                 "bbox": [x, y, bw, bh],
                 "area": int(a.area),
                 "iscrowd": 0,
-                "score": round(float(a.confidence), 4),
+                "score": round(float(a.score), 4),
             })
             ann_id += 1
 
@@ -110,7 +110,7 @@ def to_overlay(annotations, image: np.ndarray, out_path: str | Path,
         x, y, bw, bh = a.bbox
         rgb = colour_for(a.label)
         draw.rectangle([x, y, x + bw, y + bh], outline=(*rgb, 255), width=2)
-        caption = f"{a.label} {a.confidence:.2f}"
+        caption = f"{a.label} {a.score:.2f}"
         tw = draw.textlength(caption, font=font)
         ty = max(0, y - 18)
         draw.rectangle([x, ty, x + tw + 8, ty + 18], fill=(*rgb, 235))

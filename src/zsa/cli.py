@@ -36,8 +36,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="output directory")
     p.add_argument("--prompts", nargs="+", default=None,
                    help="override the class vocabulary from the config")
-    p.add_argument("--min-confidence", type=float, default=None,
-                   help="override the confidence floor")
+    p.add_argument("--min-score", type=float, default=None,
+                   help="override the CLIP score floor")
     p.add_argument("--no-overlay", action="store_true",
                    help="skip writing the visual overlay")
     p.add_argument("--coco", action="store_true",
@@ -56,8 +56,8 @@ def main(argv: list[str] | None = None) -> int:
     cfg = PipelineConfig.load(args.config)
     if args.prompts:
         cfg.prompts = args.prompts
-    if args.min_confidence is not None:
-        cfg.min_confidence = args.min_confidence
+    if args.min_score is not None:
+        cfg.min_score = args.min_score
 
     images = _images_in(args.input)
     if not images:
