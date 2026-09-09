@@ -19,7 +19,7 @@ from zsa.pipeline import Annotation, _iou, _resolve_device
 
 
 def _ann(label, conf, bbox, mask):
-    return Annotation(label=label, confidence=conf, bbox=bbox,
+    return Annotation(label=label, score=conf, bbox=bbox,
                       area=int(mask.sum()), mask=mask)
 
 
@@ -28,7 +28,7 @@ def test_config_loads_agriculture():
     assert "crop field" in cfg.prompts
     assert cfg.sam.points_per_side == 32
     assert cfg.clip.model_id.startswith("openai/clip")
-    assert 0.0 < cfg.min_confidence < 1.0
+    assert 0.0 < cfg.min_score < 1.0
 
 
 def test_config_loads_driving():
