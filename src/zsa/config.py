@@ -14,6 +14,8 @@ class SAMConfig:
     """Settings for the SAM2 automatic mask generator."""
 
     model_id: str = "facebook/sam2.1-hiera-small"
+    # SAM2 samples a points_per_side x points_per_side grid of prompt points,
+    # so 32 here means a 32 x 32 grid.
     points_per_side: int = 32
     pred_iou_thresh: float = 0.80
     stability_score_thresh: float = 0.90
@@ -34,7 +36,9 @@ class CLIPConfig:
     # traffic sign is ambiguous; a little context makes it obvious.
     context_pad: float = 0.15
     batch_size: int = 32
-    # Softmax temperature. CLIP ships 100.0 as its logit scale.
+    # CLIP ships 100.0 as its logit scale. The softmax that follows turns
+    # cosine similarities into a relative score over the vocabulary; it is not
+    # a calibrated probability.
     logit_scale: float = 100.0
 
 
@@ -51,9 +55,11 @@ class PipelineConfig:
             "a cropped photo of a {}",
         ]
     )
-    # Below this score a mask is written out as "unlabelled" rather than being
+    # Below this CLIP score a mask is written out as "unlabelled" rather than
     # forced into the closest class. Silence beats a confident wrong label.
-    min_confidence: float = 0.28
+    # This is a relative score across the vocabulary, not a calibrated
+    # probability, so the useful value is found empirically per domain.
+    min_score: float = 0.28
     # Two masks overlapping by more than this keep only the higher scoring one.
     nms_iou: float = 0.70
     device: str = "auto"

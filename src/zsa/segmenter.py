@@ -1,8 +1,9 @@
-"""SAM2 mask proposals.
+"""Class agnostic mask proposals from SAM2.
 
-SAM2 is class agnostic: it returns every region it thinks is an object, with no
-idea what any of them are. This module wraps that and applies the geometric
-filtering that keeps the proposal count workable before CLIP has to score them.
+SAM2 does not classify anything. It returns every region it thinks is an
+object, with no idea what any of them are; the semantic label comes from CLIP
+later. This module wraps the automatic mask generator and applies the mask area
+thresholds that keep the proposal count workable before CLIP has to score them.
 """
 
 from __future__ import annotations
@@ -59,6 +60,7 @@ class Segmenter:
         generator = self._load()
         raw = generator.generate(image)
 
+        # Mask area thresholds, as a fraction of the frame.
         h, w = image.shape[:2]
         frame_area = float(h * w)
         lo = self.cfg.min_area_frac * frame_area

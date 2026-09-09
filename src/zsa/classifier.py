@@ -1,8 +1,9 @@
-"""CLIP classification of mask proposals.
+"""Zero shot semantic classification of mask proposals with CLIP.
 
-SAM2 says where the objects are. CLIP says what they are, using nothing but the
-text you hand it, which is what makes the whole thing zero shot: adding a new
-class means adding a string, not collecting and labelling a dataset.
+SAM2 says where the regions are but never what they are. CLIP supplies the
+semantic label, using nothing but the text you hand it, which is what makes the
+whole thing zero shot: adding a new class means adding a string, not collecting
+and labelling a dataset.
 """
 
 from __future__ import annotations
@@ -76,7 +77,12 @@ class Classifier:
     @torch.no_grad()
     def classify(self, image: np.ndarray,
                  bboxes: list[tuple[int, int, int, int]]) -> list[tuple[str, float]]:
-        """Return (label, confidence) for every proposal box."""
+        """Return (label, score) for every proposal box.
+
+        The score is a softmax over cosine similarities against the class
+        vocabulary. It says which class fits best relative to the others, not
+        how likely the label is to be right.
+        """
         if self._text_features is None:
             raise RuntimeError("call set_prompts() before classify()")
         if not bboxes:
