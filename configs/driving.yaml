@@ -15,7 +15,7 @@ prompts:
   - vegetation
   - sky
 
-min_confidence: 0.30
+min_score: 0.30
 nms_iou: 0.70
 device: auto
 

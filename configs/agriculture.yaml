@@ -14,7 +14,7 @@ prompts:
   - fence
   - person
 
-min_confidence: 0.28
+min_score: 0.28
 nms_iou: 0.70
 device: auto
 
