@@ -1,8 +1,6 @@
 <<<<<<< HEAD
 # Zero Shot Annotation -CLIP + SAM2
-=======
-# Zero Shot Annotation — CLIP + SAM2
->>>>>>> 44068ec (Add pipeline source, configs, assets and tests)
+
 
 Label object classes you never trained on. SAM2 finds every region in an image without knowing what any of them are; CLIP names those regions using nothing but a list of strings you write. Adding a new class means adding a line to a YAML file, not collecting and hand labelling a dataset.
 
