@@ -1,0 +1,34 @@
+# Urban driving vocabulary.
+prompts:
+  - car
+  - truck
+  - bus
+  - bicycle
+  - motorcycle
+  - pedestrian
+  - traffic light
+  - traffic sign
+  - road
+  - lane marking
+  - sidewalk
+  - building
+  - vegetation
+  - sky
+
+min_confidence: 0.30
+nms_iou: 0.70
+device: auto
+
+sam:
+  model_id: facebook/sam2.1-hiera-small
+  points_per_side: 32
+  pred_iou_thresh: 0.82
+  stability_score_thresh: 0.90
+  min_mask_region_area: 700
+  max_area_frac: 0.50
+  min_area_frac: 0.0010
+
+clip:
+  model_id: openai/clip-vit-base-patch32
+  context_pad: 0.20
+  batch_size: 32

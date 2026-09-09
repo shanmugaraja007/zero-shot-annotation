@@ -1,0 +1,33 @@
+# Off road / agricultural vocabulary.
+# Adding a class here is the entire "training" step.
+prompts:
+  - crop field
+  - harvested stubble
+  - grass
+  - tree
+  - bush
+  - dirt track
+  - sky
+  - tractor
+  - combine harvester
+  - farm building
+  - fence
+  - person
+
+min_confidence: 0.28
+nms_iou: 0.70
+device: auto
+
+sam:
+  model_id: facebook/sam2.1-hiera-small
+  points_per_side: 32
+  pred_iou_thresh: 0.80
+  stability_score_thresh: 0.90
+  min_mask_region_area: 900
+  max_area_frac: 0.55
+  min_area_frac: 0.0015
+
+clip:
+  model_id: openai/clip-vit-base-patch32
+  context_pad: 0.15
+  batch_size: 32
