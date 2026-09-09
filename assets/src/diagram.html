@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1660px;height:800px;overflow:hidden}
+body{
+  background:radial-gradient(1250px 620px at 52% 22%, #0a2544 0%, #06162c 46%, #030b18 100%);
+  font-family:"Segoe UI",-apple-system,Helvetica,Arial,sans-serif;color:#e8f4ff;position:relative;
+}
+#grid{position:absolute;inset:0;opacity:.09;
+  background-image:linear-gradient(#2fa8d5 1px,transparent 1px),linear-gradient(90deg,#2fa8d5 1px,transparent 1px);
+  background-size:56px 56px;}
+svg#wires{position:absolute;inset:0;width:1660px;height:800px}
+
+.node{position:absolute;border-radius:14px;
+  background:linear-gradient(180deg,rgba(12,42,78,.82),rgba(7,24,48,.88));
+  border:1.5px solid #2b93c4;
+  box-shadow:0 0 0 1px rgba(47,168,213,.16),0 0 22px rgba(30,140,200,.16) inset,0 0 26px rgba(20,110,170,.20);
+  padding:15px 17px;}
+.node .step{position:absolute;left:-13px;top:-13px;width:30px;height:30px;border-radius:50%;
+  background:#0a2a4a;border:1.5px solid #57c8f0;color:#bfe9ff;font-size:14px;font-weight:700;
+  display:flex;align-items:center;justify-content:center}
+.node .t{font-size:18.5px;font-weight:700;line-height:1.25;text-align:center;color:#fff}
+.node .k{font-size:12.5px;letter-spacing:.9px;text-transform:uppercase;color:#5fb4de;text-align:center;margin-bottom:5px}
+.node .s{font-size:14px;line-height:1.5;color:#9dc3e0;text-align:center;margin-top:9px}
+.node .rule{height:1px;background:linear-gradient(90deg,transparent,#2b93c4,transparent);margin:9px auto 0;width:70%}
+.node::before,.node::after{content:"";position:absolute;width:13px;height:13px;border:1.5px solid #57c8f0;opacity:.7}
+.node::before{left:-1px;top:-1px;border-right:0;border-bottom:0;border-radius:14px 0 0 0}
+.node::after{right:-1px;bottom:-1px;border-left:0;border-top:0;border-radius:0 0 14px 0}
+
+.pic{position:absolute;border-radius:12px;overflow:hidden;border:1.5px solid #2b93c4;
+  box-shadow:0 0 22px rgba(20,110,170,.28)}
+.pic img{display:block;width:100%;height:100%;object-fit:cover}
+.pic .cap{position:absolute;left:0;right:0;bottom:0;padding:8px 10px;font-size:13.5px;color:#eaf6ff;
+  background:linear-gradient(transparent,rgba(3,12,26,.94));text-align:center}
+.badge{position:absolute;left:9px;top:9px;font-size:10.5px;letter-spacing:.7px;text-transform:uppercase;
+  padding:3px 8px;border-radius:5px;background:rgba(3,14,28,.86);border:1px solid #7a94a8;color:#b9cfdd}
+
+.chip{display:inline-block;font-size:12.5px;padding:4px 10px;border-radius:999px;margin:3px 3px 0 0;
+  border:1px solid #2b93c4;color:#bfe0f5;background:rgba(20,70,120,.42)}
+.chip.on{background:rgba(87,200,240,.32);color:#fff;border-color:#7fdcff;box-shadow:0 0 10px rgba(87,200,240,.55)}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+.fmt{font-size:13px;color:#bfe0f5;border:1px solid #2b93c4;border-radius:7px;padding:4px 9px;
+  background:rgba(16,58,100,.42);margin:4px 4px 0 0;display:inline-block}
+.num{color:#7fdcff;font-weight:600}
+
+.notes{position:absolute;border-radius:12px;border:1px solid #24506e;background:rgba(6,20,38,.6);
+  padding:14px 16px;font-size:12.5px;line-height:1.65;color:#7ea6c2}
+.notes b{color:#a9cfe8;font-weight:600}
+h1{position:absolute;left:46px;top:36px;font-size:26px;font-weight:700}
+h2{position:absolute;left:46px;top:72px;font-size:14.5px;font-weight:400;color:#7ba6c6}
+</style></head>
+<body>
+<div id="grid"></div>
+<svg id="wires">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 1 L9 5 L0 9 z" fill="#4d9dc4"/>
+    </marker>
+  </defs>
+</svg>
+
+<h1>Zero-Shot Annotation &#183; SAM2 + CLIP</h1>
+<h2>Class-agnostic mask proposals + zero-shot semantic classification</h2>
+
+<!-- 1 INPUT -->
+<div class="pic" id="p_input" style="left:60px;top:200px;width:372px;height:212px">
+  <img src="f_input.jpg" alt="off road track, input frame"><div class="cap">Input frame &#183; unlabelled</div>
+</div>
+
+<!-- 2 SAM2 -->
+<div class="node" id="n_sam" style="left:500px;top:200px;width:300px;height:212px">
+  <div class="step">2</div>
+  <div class="k">Segment &#183; no classes</div>
+  <div class="t">SAM2<br>mask proposals</div>
+  <div class="rule"></div>
+  <div class="s"><span class="num">32 &#215; 32</span> point grid.<br>Mask area thresholds:<br>keep <span class="num">0.15%</span>&#8211;<span class="num">55%</span> of the frame.</div>
+</div>
+
+<!-- 3 CROPS -->
+<div class="node" id="n_crops" style="left:880px;top:200px;width:300px;height:212px">
+  <div class="step">3</div>
+  <div class="k">Crop</div>
+  <div class="t">Region crops</div>
+  <div class="rule"></div>
+  <div class="s">Each mask's bounding box,<br>widened <span class="num">15%</span> for context.<br>Batched <span class="num">32</span> at a time.</div>
+</div>
+
+<!-- 4 CLIP -->
+<div class="node" id="n_clip" style="left:1260px;top:200px;width:340px;height:212px">
+  <div class="step">4</div>
+  <div class="k">Zero-shot label</div>
+  <div class="t">CLIP scoring</div>
+  <div class="rule"></div>
+  <div class="s">Crop embedding vs text embeddings.<br>Cosine similarity &#8594; softmax.<br>Highest scoring class wins.</div>
+</div>
+
+<!-- 1b VOCAB -->
+<div class="node" id="n_vocab" style="left:1180px;top:26px;width:420px;height:116px">
+  <div class="step">1</div>
+  <div class="k">Once, before any image</div>
+  <div class="t" style="font-size:17px">Prompt vocabulary &#8594; CLIP text embeddings</div>
+  <div style="text-align:center;margin-top:5px" id="chips">
+    <span class="chip">dirt track</span><span class="chip">grass</span><span class="chip">tree</span><span class="chip">bush</span><span class="chip">sky</span>
+  </div>
+</div>
+
+<!-- 5 SELECTION -->
+<div class="node" id="n_select" style="left:60px;top:520px;width:340px;height:200px">
+  <div class="step">5</div>
+  <div class="k">Filter</div>
+  <div class="t">Mask NMS</div>
+  <div class="rule"></div>
+  <div class="s">CLIP score &lt; <span class="num">0.28</span> &#8594; unlabelled, dropped.<br>Overlap at IoU &#8805; <span class="num">0.70</span> suppressed,<br>higher scoring mask kept.</div>
+</div>
+
+<!-- 6 EXPORT -->
+<div class="node" id="n_export" style="left:480px;top:520px;width:340px;height:200px">
+  <div class="step">6</div>
+  <div class="k">Write</div>
+  <div class="t">Export</div>
+  <div style="text-align:center;margin-top:9px">
+    <span class="fmt mono">COCO json</span><span class="fmt mono">index masks</span>
+    <span class="fmt mono">per image json</span><span class="fmt mono">overlay jpg</span>
+  </div>
+</div>
+
+<!-- 7 OUTPUT -->
+<div class="pic" id="p_output" style="left:900px;top:520px;width:372px;height:212px">
+  <img src="f_output.jpg" alt="class index mask"><div class="cap">Semantic / index mask &#183; labelled</div>
+</div>
+
+
+<script>
+const WIRES = [
+  {d:"M1390,142 L1390,192",                        o:0},  // vocabulary -> CLIP text side
+  {d:"M432,306 L490,306",                          o:1},  // input frame -> SAM2
+  {d:"M800,306 L870,306",                          o:2},  // SAM2 -> region crops
+  {d:"M1180,306 L1250,306",                        o:3},  // crops -> CLIP
+  {d:"M1430,412 L1430,462 L230,462 L230,512",      o:4},  // CLIP -> mask NMS (row wrap)
+  {d:"M400,620 L472,620",                          o:5},  // mask NMS -> export
+  {d:"M820,620 L892,620",                          o:6},  // export -> output
+];
+const svg=document.getElementById('wires');
+const NS="http://www.w3.org/2000/svg";
+
+const paths=[];
+WIRES.forEach(w=>{
+  const base=document.createElementNS(NS,'path');
+  base.setAttribute('d',w.d); base.setAttribute('fill','none');
+  base.setAttribute('stroke','#4d9dc4'); base.setAttribute('stroke-width','1.7');
+  base.setAttribute('marker-end','url(#ah)');
+  svg.appendChild(base);
+  const glow=document.createElementNS(NS,'path');
+  glow.setAttribute('d',w.d); glow.setAttribute('fill','none');
+  glow.setAttribute('stroke','#7fdcff'); glow.setAttribute('stroke-width','2.6');
+  glow.setAttribute('stroke-linecap','round'); glow.setAttribute('opacity','0');
+  svg.appendChild(glow);
+  const dot=document.createElementNS(NS,'circle');
+  dot.setAttribute('r','4.6'); dot.setAttribute('fill','#9fe8ff'); dot.setAttribute('opacity','0');
+  svg.appendChild(dot);
+  paths.push({p:base,glow,dot,len:base.getTotalLength(),o:w.o});
+});
+
+// node highlight follows the same order as the flow
+const NODES=[
+  {el:'n_vocab',t:0.00},{el:'p_input',t:0.13},{el:'n_sam',t:0.26},
+  {el:'n_crops',t:0.39},{el:'n_clip',t:0.52},{el:'n_select',t:0.65},
+  {el:'n_export',t:0.78},{el:'p_output',t:0.89},
+];
+const chips=[...document.querySelectorAll('#chips .chip')];
+const STEP=0.13, SPAN=0.26;
+
+function setTime(t){
+  paths.forEach(w=>{
+    const start=w.o*STEP;
+    let d=((t-start)%1+1)%1;
+    if(d>SPAN){ w.dot.setAttribute('opacity','0'); w.glow.setAttribute('opacity','0'); return; }
+    const u=d/SPAN;
+    const pt=w.p.getPointAtLength(u*w.len);
+    const fade=Math.sin(Math.PI*u);
+    w.dot.setAttribute('cx',pt.x); w.dot.setAttribute('cy',pt.y);
+    w.dot.setAttribute('opacity',(0.35+0.65*fade).toFixed(3));
+    w.glow.setAttribute('opacity',(0.42*fade).toFixed(3));
+    w.glow.setAttribute('stroke-dasharray',`${(0.30*w.len).toFixed(1)} ${w.len.toFixed(1)}`);
+    w.glow.setAttribute('stroke-dashoffset',(-u*w.len+0.15*w.len).toFixed(1));
+  });
+
+  NODES.forEach(n=>{
+    const el=document.getElementById(n.el);
+    let d=((t-n.t)%1+1)%1;
+    const pulse=d<0.20 ? Math.sin(Math.PI*(d/0.20)) : 0;
+    el.style.borderColor = pulse>0.05 ? '#8ce4ff' : '#2b93c4';
+    el.style.boxShadow = `0 0 0 1px rgba(47,168,213,${(0.16+0.34*pulse).toFixed(3)}),`+
+      `0 0 ${(22+30*pulse).toFixed(1)}px rgba(30,150,215,${(0.16+0.30*pulse).toFixed(3)}) inset,`+
+      `0 0 ${(26+48*pulse).toFixed(1)}px rgba(40,160,225,${(0.20+0.48*pulse).toFixed(3)})`;
+  });
+
+  const k=Math.floor(t*chips.length*2)%chips.length;
+  chips.forEach((c,i)=>c.className='chip'+(i===k?' on':''));
+}
+window.setTime=setTime;
+setTime(0);
+</script>
+</body></html>
