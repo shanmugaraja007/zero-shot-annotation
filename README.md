@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # Zero Shot Annotation -CLIP + SAM2
 
 
