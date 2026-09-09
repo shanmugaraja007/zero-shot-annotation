@@ -1,0 +1,7 @@
+torch>=2.3
+torchvision>=0.18
+transformers>=4.44
+sam2>=1.1
+pillow>=10.0
+numpy>=1.24
+pyyaml>=6.0

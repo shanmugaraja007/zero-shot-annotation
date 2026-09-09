@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zsa"
+version = "0.1.0"
+description = "Zero shot image annotation with CLIP and SAM2"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Shanmugaraja Pandiyan" }]
+dependencies = [
+  "torch>=2.3",
+  "torchvision>=0.18",
+  "transformers>=4.44",
+  "pillow>=10.0",
+  "numpy>=1.24",
+  "pyyaml>=6.0",
+]
+
+[project.scripts]
+zsa = "zsa.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/shanmugaraja007/zero-shot-annotation"
+
+[tool.setuptools.packages.find]
+where = ["src"]
