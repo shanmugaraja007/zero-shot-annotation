@@ -1,22 +1,28 @@
+# Zero-Shot Annotation · SAM2 + CLIP
 
-# Zero Shot Annotation -CLIP + SAM2
+*Class-agnostic mask proposals + zero-shot semantic classification*
 
+I built this to label object classes without training on them first. SAM2 finds the regions but never names them, so the semantic label comes from CLIP, driven by nothing more than a list of strings. Adding a class means adding a line of YAML rather than collecting and hand labelling a dataset.
 
-Label object classes you never trained on. SAM2 finds every region in an image without knowing what any of them are; CLIP names those regions using nothing but a list of strings you write. Adding a new class means adding a line to a YAML file, not collecting and hand labelling a dataset.
+The motivation was practical. Annotating off road and driving footage by hand is slow, and before anyone spends a week on it I wanted to know which classes a foundation model already handles in that domain, and where it falls apart once the scene stops looking like the internet.
 
-Built to cut manual annotation effort on off road and driving footage, and to see how far zero shot perception generalises when the scene stops looking like the internet.
+![Pipeline](assets/pipeline.gif)
 
-![Pipeline](assets/pipeline.png)
-
-*Schematic of the pipeline. Not a model output.*
+*Every number in the figure is a default from `configs/`.*
 
 ## How it works
 
-1. **SAM2** proposes class agnostic masks across the frame. Proposals outside a sane area band are dropped, since a mask covering 80 percent of the image is the sky, and one covering 0.05 percent is texture noise.
-2. Each mask is cropped with a little surrounding context and **CLIP** scores it against the class vocabulary. Every class is embedded under several prompt templates and averaged, which buys accuracy for free because it runs once, before any image.
-3. Anything below the confidence floor is written out as `unlabelled` rather than forced into the nearest class. On an open vocabulary the model will always return *something*, and a confident wrong label costs more to fix than a gap.
-4. Overlapping masks are suppressed by IoU, keeping the higher scoring one. SAM2 will happily return a tractor and its front wheel as separate proposals.
-5. Results are exported as COCO JSON, per image JSON, index masks, and a visual overlay for eyeballing.
+**1. Prompt vocabulary, once up front.** Each class goes through CLIP's text encoder under four templates and the results are averaged. This runs before any image is loaded, so the cost is paid once.
+
+**2. SAM2 mask proposals.** The automatic mask generator samples a 32 × 32 point grid and returns class-agnostic masks. It has no idea what any of them are. Mask area thresholds keep regions between 0.15 and 55 percent of the frame, because above that band the mask is usually the sky and below it the mask is texture noise.
+
+**3. Region crops.** Each surviving mask's bounding box is widened by 15 percent before cropping. A tight crop of a sign is ambiguous and a little context resolves it. Crops go out in batches of 32.
+
+**4. CLIP scoring.** Crop embeddings are compared with the class text embeddings by cosine similarity, then softmaxed. The highest scoring class wins.
+
+**5. Filtering.** Anything scoring under 0.28 becomes `unlabelled` and is dropped rather than forced into the nearest class. On an open vocabulary the model always returns something, and a confident wrong label costs more to fix than a gap. Mask NMS then suppresses masks overlapping at IoU 0.70 or higher, keeping the better scoring one, because SAM2 will happily return a tractor and its front wheel as separate proposals.
+
+**6. Export** as COCO JSON, semantic index masks, per image JSON and an overlay JPG.
 
 ## Install
 
@@ -28,7 +34,7 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-Weights are pulled from Hugging Face on first run and cached. CPU works; a GPU is a lot happier.
+Weights come from Hugging Face on first run and are cached after that. It runs on CPU, though a GPU makes a large difference.
 
 ## Use
 
@@ -36,7 +42,7 @@ Weights are pulled from Hugging Face on first run and cached. CPU works; a GPU i
 # one image, agricultural vocabulary
 zsa examples/field.jpg -c configs/agriculture.yaml -o runs/field
 
-# a directory, driving vocabulary, single COCO file for the run
+# a directory, driving vocabulary, one COCO file for the whole run
 zsa data/frames -c configs/driving.yaml -o runs/drive --coco
 
 # override the vocabulary inline, no config edit
@@ -63,7 +69,7 @@ cfg.prompts = ["crop field", "tree", "dirt track", "sky"]
 
 annotator = ZeroShotAnnotator(cfg)
 for ann in annotator.annotate_image("field.jpg"):
-    print(ann.label, round(ann.confidence, 3), ann.bbox)
+    print(ann.label, round(ann.score, 3), ann.bbox)
 ```
 
 ## Configuration
@@ -72,27 +78,41 @@ for ann in annotator.annotate_image("field.jpg"):
 | --- | --- |
 | `prompts` | The class vocabulary. This is the entire training step. |
 | `templates` | Prompt templates each class is embedded under, then averaged. |
-| `min_confidence` | Below this a region is dropped rather than labelled. |
-| `nms_iou` | Overlap above which the lower scoring mask is discarded. |
-| `sam.points_per_side` | Proposal density. Higher finds small objects and costs time. |
-| `sam.max_area_frac` | Upper area bound, kills whole frame masks. |
-| `clip.context_pad` | Crop padding. A tight crop of a sign is ambiguous; context helps. |
+| `min_score` | Below this CLIP score a region is dropped rather than labelled. |
+| `nms_iou` | Mask NMS threshold. Overlap at or above this discards the lower scoring mask. |
+| `sam.points_per_side` | Side of the point grid, so 32 means a 32 × 32 grid. Higher finds small objects and costs time. |
+| `sam.min_area_frac` / `sam.max_area_frac` | Mask area thresholds as a fraction of the frame. |
+| `clip.context_pad` | Crop padding. A tight crop of a sign is ambiguous and context helps. |
 
-## What it is not
+Two vocabularies ship with the repo: `configs/agriculture.yaml` for off road and field scenes, and `configs/driving.yaml` for urban driving.
 
-This trades accuracy for coverage. It is a way to get a usable first pass over a pile of unlabelled frames, and to find out which classes a foundation model already handles in your domain before anyone spends a week annotating. It is not a replacement for a supervised model trained on your data, and the confidence scores are CLIP similarities, not calibrated probabilities.
+## On the score
+
+`score` is a softmax over CLIP cosine similarities across the vocabulary. It says which class fits best relative to the others in the list, not how likely the label is to be correct. It shifts as soon as the vocabulary changes, so I treat `min_score` as a threshold to tune per domain rather than as a probability. Calling it a confidence would be misleading, which is why the field is named `score`.
+
+## What this is not
+
+This trades accuracy for coverage. It gives a usable first pass over a pile of unlabelled frames and shows which classes a foundation model already handles in a given domain. It does not replace a supervised model trained on real data, and the output still needs a human to check it, which is what the overlay export is for.
 
 ## Layout
 
 ```
 src/zsa/
   config.py       dataclass config, YAML loading
-  segmenter.py    SAM2 proposals and geometric filtering
-  classifier.py   CLIP prompt ensembling and crop scoring
-  pipeline.py     orchestration, confidence floor, mask NMS
+  segmenter.py    SAM2 class-agnostic proposals, mask area thresholds
+  classifier.py   CLIP text embeddings, prompt ensembling, crop scoring
+  pipeline.py     orchestration, score floor, mask NMS
   export.py       COCO, JSON, index masks, overlays
   cli.py          command line entry point
 configs/          agriculture and driving vocabularies
+tests/            covers config, IoU, mask NMS and every export format
+assets/src/       the animated pipeline figure and its render script
+```
+
+Tests run without downloading any weights:
+
+```bash
+pytest
 ```
 
 ## Licence
